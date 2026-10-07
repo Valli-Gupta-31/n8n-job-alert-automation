@@ -1,0 +1,213 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "9a684f0d-66d3-42f0-a1d5-5a402a2fa258",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -112,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.google.com/alerts/feeds/08033661228794281978/9498326656438416994",
+        "options": {}
+      },
+      "id": "6590eb57-ee88-4c38-b062-4ac8c0eda4f7",
+      "name": "RSS Read",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        128,
+        -112
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "0a653207-845b-4b19-8240-708ebde836ac",
+      "name": "Limit",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        368,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-flash-latest",
+          "mode": "list",
+          "cachedResultName": "models/gemini-flash-latest",
+          "cachedResultUrl": ""
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are an intelligent tech career scout. Analyze the following job alert snippet from an RSS feed.\n\nRaw Job Data:\n- Title: {{ $json.title }}\n- Content / Snippet: {{ $json.contentSnippet || $json.content || \"No snippet provided\" }}\n- URL: {{ $json.link }}\n\nYour Task:\nExtract and format the details cleanly. If the information is not explicitly mentioned in the snippet, write \"Not Disclosed / Check Link\".\n\nFormat your response strictly using this layout:\n\n📌 Role: [Job Title]\n🏢 Company / Source: [Company Name or Website]\n📍 Work Mode: [Remote / Hybrid / On-Site / Location]\n💰 Stipend / Salary: [Stipend or Salary amount, or \"Not Disclosed\"]\n🛠️ Key Tech Stack: [List key skills mentioned, e.g., Python, SQL, Machine Learning]\n📝 Brief Summary: [1-2 sentences on what the role is doing]\n🔗 Link to Apply: {{ $json.link }}\n\nCRITICAL FILTER:\nIf this item is NOT a job post, or if it has nothing to do with Software, AI, Machine Learning, Data Science, or Python (e.g., general spam, unrelated blogs, or news), simply reply with the exact single word:\nSKIP"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "bebdba30-9304-41c4-bc7e-f7ca5dbb7239",
+      "name": "Message a model",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        624,
+        -112
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "lRG0vKGWrCOl93Nq",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "659233b5-45d4-4923-8221-4152e06d6259",
+              "leftValue": "={{ $json.content.parts[0].text }}",
+              "rightValue": "SKIP",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "25e683d5-c2e0-49de-a324-a9eef1d97df6",
+      "name": "If",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1072,
+        -128
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "jsrivalligupta31@gmail.com",
+        "subject": "={{ \"🎯 New Role: \" + $('RSS Read').item.json.title.replace(/<[^>]*>?/gm, '') }}",
+        "message": "={{ $('Message a model').item.json.content.parts.map(p => p.text).join('') }}",
+        "options": {}
+      },
+      "id": "ad2a2491-fdd0-4f7d-86e1-f91e7a9ee68f",
+      "name": "Send a message",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1472,
+        -112
+      ],
+      "webhookId": "3b861742-a73e-4984-b1db-f6defd6aa51f",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "F75T6vU0XshsmTW5",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "RSS Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "25ccedaa-41a2-4136-bd6a-670801e4d0ea",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0138a914073f3fab50a0d179fa02e5fb26f352c78c169fdf2d91baca568dad54"
+  },
+  "nodeGroups": [],
+  "id": "E03DzPsDpKCQe2WN",
+  "tags": []
+}
